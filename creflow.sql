@@ -2,6 +2,12 @@ SELECT *
 FROM `friendly-cubist-511618-b4.001.careflow`
 LIMIT 1000;
 
+-----data type
+SELECT column_name, data_type
+FROM `friendly-cubist-511618-b4.001.INFORMATION_SCHEMA.COLUMNS`
+WHERE table_name = 'careflow'
+ORDER BY ordinal_position;
+
 -----Count rows, cases, and activities,department, resources
 SELECT
   COUNT(*) AS total_rows,
@@ -87,3 +93,28 @@ GROUP BY case_id
 ORDER BY total_events DESC
 LIMIT 20;
 
+----Nulls check
+SELECT
+  COUNT(*) AS total_rows,
+  COUNT(DISTINCT case_id) AS total_cases,
+  COUNTIF(case_id IS NULL) AS null_case_id,
+  COUNTIF(event_index IS NULL) AS null_event_index,
+  COUNTIF(activity IS NULL) AS null_activity,
+  COUNTIF(event_time_stamp IS NULL) AS null_timestamp,
+  COUNTIF(next_activity IS NULL) AS null_next_activity,
+  COUNTIF(resource IS NULL) AS null_resource,
+  COUNTIF(department IS NULL) AS null_department,
+  COUNTIF(status IS NULL) AS null_status
+FROM `friendly-cubist-511618-b4.001.careflow`;
+
+---Check that the nulls only appear on the last event of each case
+WITH last_events AS (
+  SELECT case_id, MAX(event_index) AS last_idx
+  FROM `friendly-cubist-511618-b4.001.careflow`
+  GROUP BY case_id
+)
+SELECT COUNT(*) AS unexpected_null_next_activity
+FROM `friendly-cubist-511618-b4.001.careflow` t
+JOIN last_events l USING (case_id)
+WHERE t.next_activity IS NULL
+  AND t.event_index != l.last_idx;
